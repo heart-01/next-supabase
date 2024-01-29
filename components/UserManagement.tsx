@@ -9,12 +9,14 @@ type Props = {};
 const UserManagement = ({}: Props) => {
   const supabase = createClient();
   const [users, setUsers] = useState<IUserModel[] | []>([]);
+  const [searchUser, setSearchUser] = useState<string>("");
 
   const getUser = async () => {
     const { data, error } = await supabase.from("users").select("*");
     const userList: IUserModel[] = data || [];
     if (error) {
       console.log("🚀 ~ getUser ~ error:", error);
+      return;
     }
     setUsers(userList);
   };
@@ -23,11 +25,24 @@ const UserManagement = ({}: Props) => {
     getUser();
   }, []);
 
+  const handleOnChangeSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchUser(event.target.value);
+  };
+
+  const handleOnClickSearch = async () => {
+    const { data: users, error } = await supabase.from("users").select("*").like("fullname", `%${searchUser}%`);
+    if (error) {
+      alert("Fail to search");
+      return;
+    }
+    setUsers(users);
+  };
+
   return (
     <div className="animate-in flex-1 flex flex-col gap-20 opacity-0 px-3">
       <div className="flex gap-2 items-center">
-        <input className="rounded-md px-4 py-2 bg-inherit border w-full" type="text" />
-        <button>Search</button>
+        <input className="rounded-md px-4 py-2 bg-inherit border w-full" type="text" onChange={handleOnChangeSearch} />
+        <button onClick={handleOnClickSearch}>Search</button>
       </div>
       <main className="flex-1 flex flex-col gap-6">
         <table className="table-auto border-collapse border border-gray-200 w-full">
