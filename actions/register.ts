@@ -4,29 +4,36 @@ import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { v4 as uuidv4 } from "uuid";
 
-export const register = async (formData: FormData) => {
-  const fullname = formData.get("fullname");
-  const email = formData.get("email");
-  const tel = formData.get("tel");
-  const attachment = formData.get("attachment") as File;
-  const fileName = `${uuidv4()}.${attachment.name.split(".").pop()}`;
+export const register = async (prevState: any, formData: FormData) => {
+  try {
+    const fullname = formData.get("fullname");
+    const email = formData.get("email");
+    const tel = formData.get("tel");
+    const attachment = formData.get("attachment") as File;
+    const fileName = `${uuidv4()}.${attachment.name.split(".").pop()}`;
 
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
 
-  const { data: uploadSuccess, error: uploadError } = await supabase.storage.from("attachments").upload(fileName, attachment);
+    const { data: uploadSuccess, error: uploadError } = await supabase.storage.from("attachments").upload(fileName, attachment);
 
-  if (uploadError) {
-    console.error("🚀 ~ register ~ uploadError", uploadError);
-    return;
-  }
+    if (uploadError) {
+      console.error("🚀 ~ register ~ uploadError", uploadError);
+      return { message: "upload error" };
+    }
 
-  const { data: publicAttachmentUrl } = supabase.storage.from("attachments").getPublicUrl(fileName);
+    const { data: publicAttachmentUrl } = supabase.storage.from("attachments").getPublicUrl(fileName);
 
-  const { error: insertError } = await supabase.from("users").insert([{ fullname, email, tel, attachment: publicAttachmentUrl.publicUrl }]);
+    const { error: insertError } = await supabase.from("users").insert([{ fullname, email, tel, attachment: publicAttachmentUrl.publicUrl }]);
 
-  if (insertError) {
-    console.log("🚀 ~ register ~ insertError:", insertError);
-    return;
+    if (insertError) {
+      console.log("🚀 ~ register ~ insertError:", insertError);
+      return { message: "register failed" };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.log("🚀 ~ register ~ error:", error);
+    return { message: "internal server error" };
   }
 };
