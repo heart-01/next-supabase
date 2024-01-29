@@ -6,7 +6,7 @@ import { IUserModel } from "@/interface/IUserModel";
 
 type Props = {};
 
-const ITEMS_PER_PAGE = 2;
+const ITEMS_PER_PAGE = 1;
 
 const UserManagement = ({}: Props) => {
   const supabase = createClient();
@@ -15,11 +15,17 @@ const UserManagement = ({}: Props) => {
   const [maxPage, setMaxPage] = useState<number>(1);
   const [searchUser, setSearchUser] = useState<string>("");
 
+  const userSupabaseQuery = () => {
+    let query = supabase.from("users").select("*", { count: "exact" });
+    if (searchUser) {
+      query = query.like("fullname", `%${searchUser}%`);
+    }
+    query = query.range((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE - 1);
+    return query;
+  };
+
   const getUser = async () => {
-    const { data, error, count } = await supabase
-      .from("users")
-      .select("*", { count: "exact" })
-      .range((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE - 1);
+    const { data, error, count } = await userSupabaseQuery();
 
     if (error) {
       console.log("🚀 ~ getUser ~ error:", error);
@@ -41,11 +47,17 @@ const UserManagement = ({}: Props) => {
   };
 
   const handleOnClickSearch = async () => {
-    const { data: users, error } = await supabase.from("users").select("*").like("fullname", `%${searchUser}%`);
+    const { data: users, error, count } = await userSupabaseQuery();
+
     if (error) {
+      console.log("🚀 ~ handleOnClickSearch ~ error:", error);
       alert("Fail to search");
       return;
     }
+
+    const calculateMaxPage = Math.ceil(((count || 1) as number) / ITEMS_PER_PAGE);
+    setPage(1);
+    setMaxPage(calculateMaxPage);
     setUsers(users);
   };
 
