@@ -6,24 +6,35 @@ import { IUserModel } from "@/interface/IUserModel";
 
 type Props = {};
 
+const ITEMS_PER_PAGE = 2;
+
 const UserManagement = ({}: Props) => {
   const supabase = createClient();
   const [users, setUsers] = useState<IUserModel[] | []>([]);
+  const [page, setPage] = useState<number>(1);
+  const [maxPage, setMaxPage] = useState<number>(1);
   const [searchUser, setSearchUser] = useState<string>("");
 
   const getUser = async () => {
-    const { data, error } = await supabase.from("users").select("*");
-    const userList: IUserModel[] = data || [];
+    const { data, error, count } = await supabase
+      .from("users")
+      .select("*", { count: "exact" })
+      .range((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE - 1);
+
     if (error) {
       console.log("🚀 ~ getUser ~ error:", error);
       return;
     }
+
+    const userList: IUserModel[] = data || [];
+    const calculateMaxPage = Math.ceil((count as number) / ITEMS_PER_PAGE);
     setUsers(userList);
+    setMaxPage(calculateMaxPage);
   };
 
   useEffect(() => {
     getUser();
-  }, []);
+  }, [page]);
 
   const handleOnChangeSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchUser(event.target.value);
@@ -68,14 +79,28 @@ const UserManagement = ({}: Props) => {
           </tbody>
         </table>
         <div className="px-5 py-5 flex flex-col xs:flex-row items-center xs:justify-between">
-          <span className="text-xs xs:text-sm ">Page 1</span>
+          <span className="text-xs xs:text-sm ">
+            Page {page} / {maxPage}
+          </span>
           <div className="inline-flex mt-2 xs:mt-0">
-            <button className="text-sm leading-none border border-solid font-bold uppercase px-3 py-1 rounded outline-none focus:outline-none mr-1 mb-1" type="button">
-              Previous
-            </button>
-            <button className="text-sm leading-none border border-solid font-bold uppercase px-3 py-1 rounded outline-none focus:outline-none mr-1 mb-1" type="button">
-              Next
-            </button>
+            {page > 1 && (
+              <button
+                onClick={() => setPage(page - 1)}
+                className="text-sm leading-none border border-solid font-bold uppercase px-3 py-1 rounded outline-none focus:outline-none mr-1 mb-1"
+                type="button"
+              >
+                Previous
+              </button>
+            )}
+            {page < maxPage && (
+              <button
+                onClick={() => setPage(page + 1)}
+                className="text-sm leading-none border border-solid font-bold uppercase px-3 py-1 rounded outline-none focus:outline-none mr-1 mb-1"
+                type="button"
+              >
+                Next
+              </button>
+            )}
           </div>
         </div>
       </main>
